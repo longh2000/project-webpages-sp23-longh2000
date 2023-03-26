@@ -1,7 +1,175 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+    div.padded {
+      padding-top: 0px;
+      padding-right: 100px;
+      padding-bottom: 0.25in;
+      padding-left: 100px;
+    }
+  </style>
+<title>Your Name  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: Additional Features to PathTracer</h1>
+    <h2 align="middle">Debby Lin, Long He</h2>
+<h2 align="middle">Website URL: <a href="https://github.com/cal-cs184-student/p3-2-pathtracer-sp23-silence_suzuka_.git">[GitHub]</a></h2>
+
+    <div class="padded">
+
+
+        * NOTE: For this project, you will choose TWO out of the four given parts to complete. One of those parts must be Part 1 or Part 2. In other words, you can choose any combination of two parts except the pair (Part 3, Part 4).
+
+        <h3 align="middle">Overview</h3>
+        <p>
+            In this project, we add new features to our raytracer that allow us to render images for objects of different materials. For each different material, we need to implement new bsdf model which helps us to determine the direction a light ray goes after intersecting with the particular object. In part 1, we implement bsdf for mirror and glass materials.
+            For a mirror material, the ray will be fully reflected at symmetric direction with respect to the incoming ray. For a glass material, part of the ray will be reflected away the face like the mirror, the other part of the ray will go through the surface but in a new direction due to refraction. We may determine the refracted direction with the Snell's Law. The ratio between reflection and refraction can be determined by the Schlick's approximation.
+
+        </p>
+
+
+        <h3 align="middle">Part 1. Mirror and Glass Materials</h3>
+
+        <p><b>
+            Show a sequence of six images of scene `CBspheres.dae` rendered with `max_ray_depth` set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light. Make sure to include all screenshots.
+        </b></p>
+        <div align="middle">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="images/part1/spheres_m0.png" align="middle" width="400px"/>
+                        <figcaption>m = 0 (CBspheres.dea)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/part1/spheres_m1.png" align="middle" width="400px"/>
+                        <figcaption>m = 1 (CBspheres.dae)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/part1/spheres_m2.png" align="middle" width="400px"/>
+                        <figcaption>m = 2 (CBspheres.dea)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/part1/spheres_m3.png" align="middle" width="400px"/>
+                        <figcaption>m = 3 (CBspheres.dae)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/part1/spheres_m4.png" align="middle" width="400px"/>
+                        <figcaption>m = 4 (CBspheres.dea)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/part1/spheres_m5.png" align="middle" width="400px"/>
+                        <figcaption>m = 5 (CBspheres.dae)</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="images/part1/spheres_m7.png" align="middle" width="400px"/>
+                        <figcaption>m = 7 (CBspheres.dea)</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/part1/spheres_m100.png" align="middle" width="400px"/>
+                        <figcaption>m = 100 (CBspheres.dea)</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br>
+
+        <br>
+        <p><b>
+            Point out the new multibounce effects that appear in each image. Explain how these bounce numbers relate to the particular effects that appear. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            m = 0: Zero bounce, only the light sources that has light emission itself can be shown. <br>
+            m = 1: One bounce, added rays that intersect with some object for one time, including the faces with diffuse bsdf that might reflect the rays to any directions like the side walls such that the whole walls are shown, except the ceil for in the same plane with the area light that cannot get intersected, and particular of part of objects with mirror (the back sphere) or glass (the frond sphere) bsdf that reflects the rays in symmetric angles.<br>
+            m = 2: Lights shot to the background and the in direction of environment behind the camera from the last bounce can get reflected back to the ceil, mirror and glass, and get reflected again with another bounce. Some rays from the last bounce also get refracted by the glass and go into the inside of the sphere, for a second bounce they get refracted again and exit the sphere, showing a refracted image on the glass sphere. <br>
+            m = 3: Lighted up ceil with rays go to the mirror sphere and get reflect; rays that exit the glass sphere shots to the floor and create a new light spot. Rays that shot to the walls or the environment with randomly diffusing direction in the first-bounce, get refracted by the glass sphere to enter and exit in the next two bounce, showing the color radiance from the walls on the glass sphere.<br>
+            m = 4: Light spot on the floor reflect again and project the spot on the wall with blur image due to light diffusion on each bounce. <br>
+            m = 5, 7, 100: More bounces, rays may lose radiance through each bounce for diffusion, since the image from the 4-bounce is already very bright, there is no noticeable difference from after m = 4.
+        </p>
+        <br>
+
+
+        <h3 align="middle">Part 2. Microfacet Material</h3>
+        <p><b>
+            Show a screenshot sequence of 4 images of scene <code>CBdragon_microfacet_au.dae</code> rendered with &#945 set to 0.005, 0.05, 0.25 and 0.5. The other settings should be at least 128 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Describe the differences between different images. Note that, to change the &#945, just open the .dae file and search for <code>microfacet</code>.
+        </b></p>
+        <p>
+            Following four screenshots show the CBDragon object under different alpha values. The alpha value represents the roughness of the macro surface. When alpha is low, the material is much specular which causes more specularity in the image as we can see obviously when alpha is below 0.05. When alpha value high enough, the material shows less reflection and more diffuse characteristic, as is obvious when alpha is set to 0.5.
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/part2/CBdragon0005.png" align="middle" width="400px"/>
+                            <figcaption>alpha = 0.005</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/part2/CBdragon005.png" align="middle" width="400px"/>
+                            <figcaption>alpha = 0.05</figcaption>
+                        </td>
+                    </tr>
+                    <tr align="center">
+                        <td>
+                            <img src="images/part2/CBdragon025.png" align="middle" width="400px"/>
+                            <figcaption>alpha = 0.25</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/part2/CBdragon05.png" align="middle" width="400px"/>
+                            <figcaption>alpha = 0.5</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+        <p><b>
+            Show two images of scene <code>CBbunny_microfacet_cu.dae</code> rendered using cosine hemisphere sampling (default) and your importance sampling. The sampling rate should be fixed at 64 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Briefly discuss their difference.
+        </b></p>
+        <p>
+            Following two screenshots show the CBBunny for cosine hemisphere sampling and our implemented importance sampling for Beckmann distribution. It can be clearly spotted that cosine hemisphere is not a fit for our microfacet model, that the phi and theta we choose is not a good approximation of the underlying pdf. In the screenshot there is much noise in the bunny compared to our importance sampling, which has a good pdf fit. Having more ray traces can alleviate the problem, but choosing the corresponding importance sampling helps greatly with efficiency.
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/part2/CBbunny_coshemi.png" align="middle" width="400px"/>
+                            <figcaption>cosine hemisphere sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/part2/CBbunny_importance.png" align="middle" width="400px"/>
+                            <figcaption>our implemented importance sampling for Beckmann distribution</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+        <p><b>
+            Show at least one image with some other conductor material, replacing <code>eta</code> and <code>k</code>. Note that you should look up values for real data rather than modifying them arbitrarily. Tell us what kind of material your parameters correspond to.
+        </b></p>
+        <p>
+            Following screenshot show the CBDragon but with material swapped to silver. The eta vector I recorded is [0.059193 0.059881 0.047366], and the k vector is [4.1283 3.5892 2.8132].
+            <div align="middle">
+                <table style="width:100%">
+                    <tr align="center">
+                        <td>
+                            <img src="images/part2/CBdragon_silver.png" align="middle" width="400px"/>
+                            <figcaption>material altered to silver</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+
+
+    </div>
+</body>
 </html>
